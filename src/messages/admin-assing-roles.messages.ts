@@ -2,9 +2,9 @@ import { codeBlock, roleMention, type Snowflake } from "discord.js";
 
 export const AdminAssignRolesMessages = {
   embed: {
-    title: "Назначение ролей кураторов",
+    title: "Назначение роли супер пользователя",
     description:
-      "С помощью селект меню ниже, назначьте роли кураторов, позволяющие создавать тайтлы",
+      "С помощью селект меню ниже, назначьте роль супер пользователя, позволяющая создавать тайтлы",
     fields: (roleId?: Snowflake) => [
       {
         name: "Нынешняя роль",
@@ -13,12 +13,12 @@ export const AdminAssignRolesMessages = {
     ],
   },
   assingSelect: {
-    placeholder: "Выберите роль куратора",
+    placeholder: "Выберите роль супер пользователя",
     messages: {
       success: {
-        title: "Назначение роли куратора",
+        title: "Назначение роли супер пользователя",
         description: (id: Snowflake) =>
-          `Успешно установлена роль куратора ${roleMention(id)}`,
+          `Успешно установлена роль супер пользователя ${roleMention(id)}`,
       },
       error: {
         title: "Ошибка",
@@ -31,11 +31,11 @@ export const AdminAssignRolesMessages = {
     messages: {
       success: {
         title: `Удаление роли`,
-        description: "Роль куратора была успешно удалена",
+        description: "Роль супер пользователя была успешно удалена",
       },
       notExisted: {
         title: "Роли не существует",
-        description: "Невозможно удалить роль куратора из настроек",
+        description: "Невозможно удалить роль супер пользователя из настроек",
       },
       error: {
         title: "Ошибка",

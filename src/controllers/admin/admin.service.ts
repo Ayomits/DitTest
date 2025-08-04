@@ -31,11 +31,15 @@ export class AdminService {
     await interaction.deferReply({ ephemeral: true });
     const username = UsersUtility.getUsername(interaction.user);
     const avatar = UsersUtility.getAvatar(interaction.user);
+    const existed = await this.curatorRolesRepository.findByGuildId(
+      interaction.guild!.id
+    );
     const embed = new EmbedBuilder()
       .setTitle(AdminAssignRolesMessages.embed.title)
       .setDescription(AdminAssignRolesMessages.embed.description)
       .setThumbnail(avatar)
-      .setFooter({ text: username, iconURL: avatar });
+      .setFooter({ text: username, iconURL: avatar })
+      .setFields(AdminAssignRolesMessages.embed.fields(existed?.roleId));
 
     const assingRolesSelect =
       new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
