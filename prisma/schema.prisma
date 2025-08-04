@@ -23,6 +23,7 @@ model SuperRole {
 
 model Curator {
   id      Int       @id @default(autoincrement())
+  guildId String    @map("guild_id")
   userId  String    @map("user_id")
   Project Project[]
 
@@ -31,6 +32,7 @@ model Curator {
 
 model Project {
   id        Int        @id @default(autoincrement())
+  guildId   String     @map("guild_id")
   title     String     @db.VarChar(255)
   poster    String
   messageId String?    @map("message_id") @db.VarChar(255)
@@ -38,18 +40,26 @@ model Project {
   branchId  String?    @map("branch_id") @db.VarChar(255)
   staff     Employee[]
   platforms Platform[]
-  curator   Curator    @relation(fields: [curatorId], references: [id], onDelete: Cascade)
-  curatorId Int
+  curator   Curator?   @relation(fields: [curatorId], references: [id], onDelete: Cascade)
+  curatorId Int?
 
   @@map("projects")
 }
 
+enum Profession {
+  TRANSLATOR
+  EDIT
+  CLEANER
+  TYPER
+  BETAREADER
+}
+
 model Employee {
-  id         Int     @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   userId     String
-  project    Project @relation(fields: [projectId], references: [id])
-  profession String
-  projectId  Int     @map("project_id")
+  project    Project    @relation(fields: [projectId], references: [id])
+  profession Profession
+  projectId  Int        @map("project_id")
 
   @@map("employes")
 }

@@ -11,7 +11,7 @@ import { inject, injectable } from "tsyringe";
 
 import { logger } from "#logger/index.js";
 import { AdminAssignRolesMessages } from "#messages/admin-assing-roles.messages.js";
-import { SuperRolesRepository } from "#repositories/curator-roles.repository.js";
+import { SuperRolesRepository } from "#repositories/super-roles.repository.js";
 import { EmbedBuilder } from "#shared/embeds/embed.builder.js";
 import { UsersUtility } from "#shared/embeds/user.utility.js";
 
@@ -29,11 +29,11 @@ export class AdminService {
 
   async assingRolesSlash(interaction: CommandInteraction) {
     await interaction.deferReply({ ephemeral: true });
-    const username = UsersUtility.getUsername(interaction.user);
-    const avatar = UsersUtility.getAvatar(interaction.user);
     const existed = await this.curatorRolesRepository.findByGuildId(
       interaction.guild!.id
     );
+    const username = UsersUtility.getUsername(interaction.user);
+    const avatar = UsersUtility.getAvatar(interaction.user);
     const embed = new EmbedBuilder()
       .setTitle(AdminAssignRolesMessages.embed.title)
       .setDescription(AdminAssignRolesMessages.embed.description)
