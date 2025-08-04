@@ -23,7 +23,7 @@
    ![super-role-img](screnshots/super-role.png)
 
 2. Эмбед назначенной роли (успех):
-   ![super-role-img-assing-success](screnshots/super-role-assign-error.png)
+   ![super-role-img-assing-success](screnshots/super-role-assign-success.png)
 
 3. Эмбед назначенной роли (провал):
    ![!\[super-role-img-assing-failure\](screnshots/super-role-assing-error.png)](screnshots/super-role-assign-error.png)
