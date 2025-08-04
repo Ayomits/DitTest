@@ -26,7 +26,7 @@
    ![super-role-img-assing-success](screnshots/super-role-assign-error.png)
 
 3. Эмбед назначенной роли (провал):
-   ![super-role-img-assing-failure](screnshots/super-role-assing-error.png)
+   ![!\[super-role-img-assing-failure\](screnshots/super-role-assing-error.png)](screnshots/super-role-assign-error.png)
 
 4. Удаление роли (успех):
    ![alt text](screnshots/super-role-remove-success.png)
