@@ -11,6 +11,8 @@ import {
   type InteractionEditReplyOptions,
   ModalBuilder,
   type ModalSubmitInteraction,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
   TextInputBuilder,
   TextInputStyle,
   userMention,
@@ -22,13 +24,15 @@ import { inject, injectable } from "tsyringe";
 
 import { CreateProjectMessages } from "#messages/create-project.messages.js";
 import { CuratorRepository } from "#repositories/curator.repository.js";
-import { ProjectRepository } from "#repositories/project.repository.js";
 import { SuperRolesRepository } from "#repositories/super-roles.repository.js";
 import { EmbedBuilder } from "#shared/embeds/embed.builder.js";
 import { UsersUtility } from "#shared/embeds/user.utility.js";
+import { prisma } from "#shared/prisma/client.js";
 
 import {
   CreateProjectModalId,
+  PlatformManagerAddId,
+  PlatformManagerUpdateId,
   ProjectAssignCuratorId,
   ProjectManageEmployeeId,
   ProjectManagePlatformsId,
@@ -41,7 +45,6 @@ import {
 @injectable()
 export class ProjectService {
   constructor(
-    @inject(ProjectRepository) private projectRepository: ProjectRepository,
     @inject(SuperRolesRepository)
     private superRolesRepository: SuperRolesRepository,
     @inject(CuratorRepository) private curatorRepository: CuratorRepository
@@ -101,10 +104,12 @@ export class ProjectService {
         ],
       });
     }
-    const existed = await this.projectRepository.findByTitle(
-      interaction.guild!.id,
-      title
-    );
+    const existed = await prisma.project.findFirst({
+      where: {
+        guildId: interaction.guild!.id,
+        title,
+      },
+    });
 
     if (existed) {
       return interaction.editReply({
@@ -126,11 +131,16 @@ export class ProjectService {
       });
     }
 
-    const project = await this.projectRepository.createProject(
-      interaction.guild!.id,
-      title,
-      poster
-    );
+    const project = await prisma.project.create({
+      data: {
+        guildId: interaction.guild!.id,
+        title,
+        poster,
+      },
+      include: {
+        curator: true,
+      },
+    });
 
     return await this.panel(interaction, project);
   }
@@ -156,7 +166,11 @@ export class ProjectService {
       });
     }
 
-    const project = await this.projectRepository.findById(numProjectId);
+    const project = await prisma.project.findUnique({
+      where: {
+        id: numProjectId,
+      },
+    });
 
     if (!project) {
       // Does not exists error
@@ -188,18 +202,21 @@ export class ProjectService {
 
     collector.on("collect", async (i) => {
       const customId = i.customId;
-      const isSuperUser = await this.isSuperUser(i);
-      const isProjectCurator = await this.isProjectCurator(i, project.id);
-      const canActivate = isSuperUser || isProjectCurator;
+      const activation = await this.canActivate(i, project.id);
+
+      const projectId = project.id;
 
       switch (true) {
-        case customId === ProjectAssignCuratorId && isSuperUser:
-          return this.assignCurator(i as UserSelectMenuInteraction, project.id);
-        case customId === ProjectRemoveCuratorId && isSuperUser:
-          return this.removeCurator(i as ButtonInteraction, project.id);
-        case customId === ProjectPreviewId && canActivate:
+        case customId === ProjectAssignCuratorId && activation.canActivateSuper:
+          return this.assignCurator(i as UserSelectMenuInteraction, projectId);
+        case customId === ProjectRemoveCuratorId && activation.canActivateSuper:
+          return this.removeCurator(i as ButtonInteraction, projectId);
+        case customId === ProjectManagePlatformsId &&
+          activation.canActivateCurator:
+          return this.platformManageButton(i as ButtonInteraction, projectId);
+        case customId === ProjectPreviewId && activation.canActivateCurator:
           break;
-        case customId === ProjectPublishId && canActivate:
+        case customId === ProjectPublishId && activation.canActivateCurator:
           break;
         default:
           break;
@@ -312,10 +329,17 @@ export class ProjectService {
       userId!
     );
 
-    const newProject = await this.projectRepository.assignCurator(
-      projectId,
-      curator.id
-    );
+    const newProject = await prisma.project.update({
+      where: {
+        id: projectId,
+      },
+      data: {
+        curatorId: curator.id,
+      },
+      include: {
+        curator: true,
+      },
+    });
 
     return await interaction.editReply(
       await this.createPanelMessage(interaction, newProject)
@@ -328,17 +352,120 @@ export class ProjectService {
   ) {
     await interaction.deferUpdate();
 
-    const newProject = await this.projectRepository.unlinkCurator(projectId);
+    const newProject = await prisma.project.update({
+      where: {
+        id: projectId,
+      },
+      data: {
+        curatorId: null,
+      },
+      include: {
+        curator: true,
+      },
+    });
 
     await interaction.editReply(
       await this.createPanelMessage(interaction, newProject)
     );
   }
 
-  // ==============Управление платформами==========
-  // private async platformManage() {}
+  // =============Управление работниками==========
 
-  // private async addPlatform() {}
+  // ==============Управление платформами==========
+
+  // private async addPlatformButton() {}
+
+  // private async updatePlatformButton() {}
+
+  // private async deletePlatformButton() {}
+
+  private async platformManageButton(
+    interaction: ButtonInteraction,
+    projectId: number
+  ) {
+    await interaction.deferReply({ ephemeral: true });
+    const message = await interaction.editReply(
+      await this.createPlatformManageMessage(interaction, projectId)
+    );
+
+    const collector = message.createMessageComponentCollector({
+      time: 600_000,
+    });
+
+    collector.on("collect", async (i) => {
+      const customId = i.customId;
+      const activation = await this.canActivate(i, projectId);
+
+      switch (true) {
+        case customId == PlatformManagerAddId && activation.canActivateCurator:
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  private async createPlatformManageMessage(
+    interaction: ButtonInteraction,
+    projectId: number
+  ): Promise<InteractionEditReplyOptions> {
+    const project = await prisma.project.findUnique({
+      where: {
+        id: projectId,
+      },
+      include: {
+        platforms: true,
+      },
+    });
+
+    const username = UsersUtility.getUsername(interaction.user);
+    const avatar = UsersUtility.getAvatar(interaction.user);
+    const embed = new EmbedBuilder()
+      .setThumbnail(avatar)
+      .setFooter({ text: username, iconURL: avatar });
+
+    const platforms =
+      project?.platforms
+        .slice(0, 25)
+        .map((platform) =>
+          new StringSelectMenuOptionBuilder()
+            .setLabel(platform.name)
+            .setValue(platform.id.toString())
+        ) ?? [];
+
+    const updateProjectSelect =
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(PlatformManagerUpdateId)
+          .setPlaceholder("Платформа для обновления")
+          .setOptions(platforms)
+      );
+
+    const deleteProjectSelect =
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(PlatformManagerAddId)
+          .setPlaceholder("Платформа для удаления")
+          .setOptions(platforms)
+      );
+
+    const addPlatform = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(PlatformManagerAddId)
+        .setLabel("Добавить платформу")
+        .setStyle(ButtonStyle.Success)
+    );
+
+    const components =
+      platforms.length > 0
+        ? [updateProjectSelect, deleteProjectSelect, addPlatform]
+        : [addPlatform];
+
+    return {
+      embeds: [embed],
+      components: components,
+    };
+  }
 
   // ===============Проверка прав===============
   private async isSuperUser(interaction: Interaction) {
@@ -355,10 +482,32 @@ export class ProjectService {
     return member.roles.cache.some((r) => existed.roleId == r.id);
   }
 
-  private async isProjectCurator(interaction: Interaction, projectId: number) {
-    const project = await this.projectRepository.findById(projectId);
+  private async canActivate(interaction: Interaction, projectId: number) {
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+      },
+      include: {
+        curator: true,
+      },
+    });
 
-    return project?.curator?.userId === interaction.user.id;
+    const isSuperUser = await this.isSuperUser(interaction);
+    const isProjectExists = !!project;
+    const isCurator =
+      interaction.member && interaction.guild
+        ? (interaction.member as GuildMember).roles.cache.some(
+            (r) => r.id == project?.curator?.userId
+          )
+        : false;
+
+    return {
+      isProjectExists,
+      isSuperUser,
+      isCurator,
+      canActivateCurator: isProjectExists && (isSuperUser || isCurator),
+      canActivateSuper: isProjectExists && isSuperUser,
+    };
   }
 
   // private processEmployee() {}
