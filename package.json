@@ -1,0 +1,52 @@
+{
+  "name": "dit-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "format:fix": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "lint:check": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "build": "tsc -b && npx tsc-alias",
+    "dev": "nodemon",
+    "prod": "node dist/main.js",
+    "prisma:migrations:migrate": "pnpx prisma migrate dev",
+    "prisma:migrations:create": "pnpx prisma migrate dev --name",
+    "prisma:generate": "pnpx prisma generate"
+  },
+  "imports": {
+    "#/*": "./dist/*"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.13.1",
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.30.1",
+    "@types/dotenv": "^8.2.3",
+    "@types/node": "^24.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.36.0",
+    "esbuild-plugin-version-injector": "^1.2.1",
+    "eslint": "^9.30.1",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "prisma": "^6.13.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@discordx/importer": "^1.3.3",
+    "@prisma/client": "^6.13.0",
+    "ayologger": "^0.0.11",
+    "discord.js": "^14.21.0",
+    "discordx": "^11.12.5",
+    "dotenv": "^17.2.1",
+    "globals": "^16.3.0",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.10.0"
+  }
+}

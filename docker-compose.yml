@@ -1,0 +1,29 @@
+name: "dit"
+
+services:
+  dit-bot:
+    container_name: dit-bot
+    volumes:
+      - ./:/app
+    build:
+      target: $APP_ENV
+    environment:
+      - APP_ENV=$APP_ENV
+
+  dit-postgres:
+    container_name: dit-postgres
+    image: postgres:17.5-alpine
+    restart: always
+    environment:
+      PGDATA: /pgdata
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - postgres_data:/pgdata
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+    driver: local
