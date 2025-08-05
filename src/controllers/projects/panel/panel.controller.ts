@@ -15,11 +15,11 @@ export class PanelController {
 
   @ModalComponent({ id: PlatformManagerAddModalId })
   async platformManagerAddModal(interaction: ModalSubmitInteraction) {
-    return this.projectPanel.__addPlatformModal(interaction);
+    return this.projectPanel.handlePlatformCreation(interaction);
   }
 
   @ModalComponent({ id: PlatformManagerUpdateModalId })
   async platformManagerUpdateModal(interaction: ModalSubmitInteraction) {
-    return this.projectPanel.__updatePlatformModal(interaction);
+    return this.projectPanel.processPlatformUpdate(interaction);
   }
 }
