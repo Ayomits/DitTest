@@ -1,7 +1,8 @@
 import {
   ActionRowBuilder,
-  // type AutocompleteInteraction,
+  type AutocompleteInteraction,
   type CommandInteraction,
+  type GuildMember,
   type MessageContextMenuCommandInteraction,
   ModalBuilder,
   type ModalSubmitInteraction,
@@ -189,5 +190,50 @@ export class ProjectService {
     return await this.projectPanel.panel(interaction, project);
   }
 
-  // async projectAutocomplete(interaction: AutocompleteInteraction) {}
+  static async projectAutocomplete(interaction: AutocompleteInteraction) {
+    try {
+      const member = interaction.member as GuildMember;
+      const guild = interaction.guild;
+
+      if (!member || !interaction.guild) {
+        return interaction.respond([]);
+      }
+      const superRole = await prisma.superRole.findUnique({
+        where: {
+          guildId: guild!.id,
+        },
+      });
+
+      if (!superRole) {
+        return interaction.respond([]);
+      }
+
+      if (member.roles.cache.has(superRole?.roleId)) {
+        const projects = await prisma.project.findMany({
+          where: {
+            guildId: guild?.id,
+          },
+        });
+        return interaction.respond(
+          projects.map((p) => ({ value: p.id.toString(), name: p.title }))
+        );
+      }
+
+      const projects = await prisma.project.findMany({
+        where: {
+          guildId: guild?.id,
+          curator: {
+            userId: interaction.user.id,
+            guildId: guild?.id,
+          },
+        },
+      });
+
+      return interaction.respond(
+        projects.map((p) => ({ value: p.id.toString(), name: p.title }))
+      );
+    } catch {
+      return interaction.respond([]);
+    }
+  }
 }

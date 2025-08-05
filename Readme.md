@@ -11,6 +11,7 @@
 3. yarn install (внутри)
 4. yarn prisma:generate (внутри)
 5. yarn prisma:migrations:migrate (внутри)
+6. docker compose restart dit-bot
 
 ## Терминология
 

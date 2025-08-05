@@ -42,6 +42,7 @@ export class ProjectController {
       name: "search",
       description: "Проект для обновления",
       type: ApplicationCommandOptionType.String,
+      autocomplete: ProjectService.projectAutocomplete,
       required: true,
     })
     projectId: string,
