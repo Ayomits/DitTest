@@ -353,7 +353,9 @@ export class ProjectPanel {
 
       const collector = repl.createMessageComponentCollector({
         time: 600_000,
+        filter: (i) => i.message.id === repl.id,
       });
+
       collector.on("collect", async (i) => {
         const customId = i.customId;
 
@@ -421,7 +423,6 @@ export class ProjectPanel {
   ) {
     const platforms = this.processPlatforms(project.platforms);
     const staff = this.processStaff(project.staff, project.curator);
-
 
     const embed = new EmbedBuilder()
       .setDescription(quote(project.title))
@@ -565,6 +566,7 @@ export class ProjectPanel {
 
     const collector = repl.createMessageComponentCollector({
       time: 600_000,
+      filter: (i) => i.message.id === repl.id,
     });
 
     collector.on("collect", async (inter) => {
@@ -674,7 +676,10 @@ export class ProjectPanel {
       components: [employeeRow],
     });
 
-    const collector = repl.createMessageComponentCollector({ time: 600_000 });
+    const collector = repl.createMessageComponentCollector({
+      time: 600_000,
+      filter: (i) => i.message.id === repl.id,
+    });
 
     collector.on("collect", async (i) => {
       const customId = i.customId;
@@ -756,6 +761,7 @@ export class ProjectPanel {
 
     const collector = repl.createMessageComponentCollector({
       time: 600_000,
+      filter: (i) => i.user.id === repl.id,
     });
 
     let profession: Profession | null = null;
@@ -901,6 +907,7 @@ export class ProjectPanel {
 
     const collector = repl.createMessageComponentCollector({
       time: 600_000,
+      filter: (i) => i.message.id === repl.id,
     });
 
     collector.on("collect", async (i) => {
@@ -957,12 +964,13 @@ export class ProjectPanel {
     projectId: number
   ) {
     await interaction.deferReply({ ephemeral: true });
-    const message = await interaction.editReply(
+    const repl = await interaction.editReply(
       await this.createPlatformManageMessage(interaction, projectId)
     );
 
-    const collector = message.createMessageComponentCollector({
+    const collector = repl.createMessageComponentCollector({
       time: 600_000,
+      filter: (i) => i.message.id === repl.id,
     });
 
     collector.on("collect", async (i) => {
