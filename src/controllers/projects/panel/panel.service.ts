@@ -10,6 +10,7 @@ import {
   ButtonBuilder,
   type ButtonInteraction,
   ButtonStyle,
+  channelMention,
   ChannelSelectMenuBuilder,
   type ChannelSelectMenuInteraction,
   ChannelType,
@@ -41,6 +42,7 @@ import {
   getRussianTranslations,
   type Profession,
 } from "#const/professions.js";
+import { logger } from "#logger/index.js";
 import { CuratorRepository } from "#repositories/curator.repository.js";
 import { SuperRolesRepository } from "#repositories/super-roles.repository.js";
 import { EmbedBuilder } from "#shared/embeds/embed.builder.js";
@@ -137,9 +139,14 @@ export class ProjectPanel {
         case customId === ProjectPublishId && activation.canActivateCurator:
           return this.publishMessageButton(i as ButtonInteraction, projectId);
 
+        // Кнопка отвязать
+        case customId === ProjectUnlinkId && activation.canActivateCurator:
+          return this.handleUnlink(i as ButtonInteraction, project.id);
+
         // Кнопка для удаления
         case customId === ProjectDeleteId && activation.canActivateSuper:
           return this.handleProjectDeletion(i as ButtonInteraction, projectId);
+
         default:
           break;
       }
@@ -293,57 +300,69 @@ export class ProjectPanel {
       include: { platforms: true; staff: true; curator: true };
     }>
   ) {
-    const channel = (await interaction.guild?.channels.fetch(
-      project.channelId!
-    )) as TextChannel;
+    try {
+      const channel = (await interaction.guild?.channels
+        .fetch(project.channelId!)
+        .catch(logger.error)) as TextChannel;
 
-    if (!channel) {
+      if (!channel) {
+        interaction.editReply({
+          content: "Канал, к которому привязан проект, был не найден",
+        });
+        return await this.resetProjectMessage(project.id);
+      }
+
+      const message = await channel.messages
+        .fetch(project.messageId!)
+        .catch(logger.error);
+
+      if (!message) {
+        interaction.editReply({
+          content: "Сообщение, к которому привязан проект, было не найдено",
+        });
+        return await this.resetProjectMessage(project.id);
+      }
+
+      let branch = await channel.threads
+        .fetch(project.branchId!)
+        .catch(logger.error);
+
+      if (!branch) {
+        branch = await message.startThread({
+          name: "Материалы тайтла",
+        });
+      }
+
+      let newProject = project;
+
+      if (project.branchId !== branch.id) {
+        newProject = await prisma.project.update({
+          where: {
+            id: project.id,
+          },
+          data: {
+            branchId: branch.id,
+          },
+          include: {
+            staff: true,
+            curator: true,
+            platforms: true,
+          },
+        });
+      }
+      const embed = this.processMessageEmbed(interaction, newProject);
+      message.edit({ embeds: [embed] });
+
       interaction.editReply({
-        content: "Канал, к которому привязан проект, был не найден",
+        content: "Сообщение успешно обновлено",
       });
-      return await this.resetProjectMessage(project.id);
-    }
-
-    const message = await channel.messages.fetch(project.messageId!);
-
-    if (!message) {
+    } catch (err) {
+      logger.error(err);
       interaction.editReply({
-        content: "Сообщение, к которому привязан проект, было не найдено",
-      });
-      return await this.resetProjectMessage(project.id);
-    }
-
-    let branch = await channel.threads.fetch(project.branchId!);
-
-    if (!branch) {
-      branch = await message.startThread({
-        name: "Материалы тайтла",
+        content:
+          "Не удалось обновить сообщение. Возможно у бота нет прав, а возможно, что сообщение сломано",
       });
     }
-
-    let newProject = project;
-
-    if (project.branchId !== branch.id) {
-      newProject = await prisma.project.update({
-        where: {
-          id: project.id,
-        },
-        data: {
-          branchId: branch.id,
-        },
-        include: {
-          staff: true,
-          curator: true,
-          platforms: true,
-        },
-      });
-    }
-    const embed = this.processMessageEmbed(interaction, newProject);
-    message.edit({ embeds: [embed] });
-
-    interaction.editReply({
-      content: "Сообщени успешно обновлено",
-    });
   }
 
   private async handlePublishProjectMessage(
@@ -404,14 +423,18 @@ export class ProjectPanel {
         await message.edit({
           embeds: [embed],
         });
-      } catch {
-        return;
+      } catch (err) {
+        logger.error(err);
+        interaction.editReply({
+          content:
+            "Не удалось отправить сообщение. Возможно, что у бота нет прав",
+        });
       }
     });
   }
 
   private async resetProjectMessage(projectId: number) {
-    await prisma.project.update({
+    return await prisma.project.update({
       where: {
         id: projectId,
       },
@@ -420,7 +443,19 @@ export class ProjectPanel {
         channelId: null,
         branchId: null,
       },
+      include: {
+        curator: true,
+      },
     });
+  }
+
+  private async handleUnlink(
+    interaction: ButtonInteraction,
+    projectId: number
+  ) {
+    await interaction.deferUpdate();
+    const project = await this.resetProjectMessage(projectId);
+    interaction.editReply(await this.createPanelMessage(interaction, project));
   }
 
   // =============Сообщение для публикации===========
@@ -433,9 +468,10 @@ export class ProjectPanel {
   ) {
     const platforms = this.processPlatformsText(project.platforms);
     const staff = this.processStaffText(project.staff, project.curator);
+    const branch = project.branchId ? channelMention(project.branchId) : "";
 
     const embed = new EmbedBuilder()
-      .setDescription(quote(project.title))
+      .setDescription([quote(project.title), branch].join("\n"))
       .setImage(project.poster)
       .setTimestamp(Date.now())
       .setFooter({
@@ -466,10 +502,12 @@ export class ProjectPanel {
     curator?: Curator | undefined | null
   ) {
     return [
-      staff.map(
-        (e) =>
-          `${inlineCode(getRussianTranslation(e.profession as Profession))}:${userMention(e.userId)}`
-      ),
+      staff
+        .map(
+          (e) =>
+            `${inlineCode(getRussianTranslation(e.profession as Profession))}:${userMention(e.userId)}`
+        )
+        .join("\n"),
       curator
         ? `${inlineCode("Куратор")}:${userMention(curator.userId)}`
         : null,
@@ -477,6 +515,7 @@ export class ProjectPanel {
   }
 
   // =============Управление кураторами===============
+
   private async handleCuratorAssignment(
     interaction: UserSelectMenuInteraction,
     projectId: number
