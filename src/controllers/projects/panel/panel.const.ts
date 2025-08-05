@@ -11,6 +11,8 @@ export const ProjectUnlinkId = "project-unlink";
 export const ProjectManagePlatformsId = "platform-manage";
 export const ProjectRemoveCuratorId = "curator-remove";
 
+export const ProjectPublishChannelSelectId = "project-publish-channel-select";
+
 // Панель (управление платформами) - кнопки
 export const PlatformManagerAddButtonId = "add-platform-button";
 // Панель (управление платформами) - модалки
@@ -20,7 +22,17 @@ export const PlatformManagerUpdateModalId = "update-platform-modal";
 export const PlatformManagerRemoveId = "remove-platform-select";
 export const PlatformManagerUpdateId = "update-platform-select";
 
+// Панель (управление работниками) - кнопки
+export const EmployeeAssignId = "assign-employee-button";
+export const EmployeeDeleteId = "delete-employee-button";
+// Панель (управление работниками) - селекты
+export const EmployeeAssignProfessionId = "assign-employee-prof-button";
+export const EmployeeAssignUsrId = "assign-employee-usr-button";
+export const EmployeeDeleteProfessionId = "delete-employee-prof-select";
+
+// Лимиты
 export const PlatformLimit = 25;
+export const EmployeeLimit = 25;
 
 // ID для полей в модалках
 export const TitleFieldId = "title";

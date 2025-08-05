@@ -1,13 +1,23 @@
-import type { Platform, Prisma, Project } from "@prisma/client";
+import type {
+  Curator,
+  Employee,
+  Platform,
+  Prisma,
+  Project,
+} from "@prisma/client";
 import {
   ActionRowBuilder,
   ButtonBuilder,
   type ButtonInteraction,
   ButtonStyle,
+  ChannelSelectMenuBuilder,
+  type ChannelSelectMenuInteraction,
+  ChannelType,
   codeBlock,
   type CommandInteraction,
   type GuildMember,
   hyperlink,
+  inlineCode,
   type Interaction,
   type InteractionEditReplyOptions,
   ModalBuilder,
@@ -16,6 +26,7 @@ import {
   StringSelectMenuBuilder,
   type StringSelectMenuInteraction,
   StringSelectMenuOptionBuilder,
+  type TextChannel,
   TextInputBuilder,
   TextInputStyle,
   userMention,
@@ -24,6 +35,11 @@ import {
 } from "discord.js";
 import { inject, injectable } from "tsyringe";
 
+import {
+  getRussianTranslation,
+  getRussianTranslations,
+  type Profession,
+} from "#const/professions.js";
 import { CuratorRepository } from "#repositories/curator.repository.js";
 import { SuperRolesRepository } from "#repositories/super-roles.repository.js";
 import { EmbedBuilder } from "#shared/embeds/embed.builder.js";
@@ -31,6 +47,12 @@ import { prisma } from "#shared/prisma/client.js";
 import { UrlValidator } from "#shared/validators/url.js";
 
 import {
+  EmployeeAssignId,
+  EmployeeAssignProfessionId,
+  EmployeeAssignUsrId,
+  EmployeeDeleteId,
+  EmployeeDeleteProfessionId,
+  EmployeeLimit,
   PlatformIdFieldId,
   PlatformLimit,
   PlatformManagerAddButtonId,
@@ -46,6 +68,7 @@ import {
   ProjectManageEmployeeId,
   ProjectManagePlatformsId,
   ProjectPreviewId,
+  ProjectPublishChannelSelectId,
   ProjectPublishId,
   ProjectRemoveCuratorId,
   ProjectUnlinkId,
@@ -95,13 +118,17 @@ export class ProjectPanel {
           activation.canActivateCurator:
           return this.platformManageButton(i as ButtonInteraction, projectId);
 
+        case customId === ProjectManageEmployeeId &&
+          activation.canActivateCurator:
+          return this.manageEmployee(i as ButtonInteraction, projectId);
+
         // Кнопка для превью
         case customId === ProjectPreviewId && activation.canActivateCurator:
           return this.previewMessageButton(i as ButtonInteraction, projectId);
 
         // Кнопка для публикации
         case customId === ProjectPublishId && activation.canActivateCurator:
-          break;
+          return this.publishMessageButton(i as ButtonInteraction, projectId);
 
         // Кнопка для удаления
         case customId === ProjectDeleteId && activation.canActivateSuper:
@@ -211,6 +238,7 @@ export class ProjectPanel {
     interaction: ButtonInteraction,
     projectId: number
   ) {
+    await interaction.deferReply({ ephemeral: true });
     const project = await prisma.project.findUnique({
       where: {
         id: projectId,
@@ -218,28 +246,182 @@ export class ProjectPanel {
       include: {
         platforms: true,
         staff: true,
+        curator: true,
       },
     });
 
     if (!project) {
-      return interaction.reply({
+      return interaction.editReply({
         content: "Указанного проекта больше не существует",
       });
     }
 
-    return interaction.reply({
+    return interaction.editReply({
       embeds: [this.processMessage(interaction, project)],
-      ephemeral: true,
+    });
+  }
+
+  private async publishMessageButton(
+    interaction: ButtonInteraction,
+    projectId: number
+  ) {
+    await interaction.deferReply({ ephemeral: true });
+    const project = await prisma.project.findUnique({
+      where: {
+        id: projectId,
+      },
+      include: {
+        staff: true,
+        platforms: true,
+        curator: true,
+      },
+    });
+
+    if (!project) {
+      return interaction.editReply({
+        content: "Указанный проект не существует",
+      });
+    }
+
+    if (project.messageId && project.channelId && project.branchId) {
+      const channel = (await interaction.guild?.channels.fetch(
+        project.channelId
+      )) as TextChannel;
+
+      if (!channel) {
+        interaction.editReply({
+          content: "Канал, к которому привязан проект, был не найден",
+        });
+        return await this.resetProjectMessage(projectId);
+      }
+
+      const message = await channel.messages.fetch(project.messageId);
+
+      if (!message) {
+        interaction.editReply({
+          content: "Сообщение, к которому привязан проект, было не найдено",
+        });
+        return await this.resetProjectMessage(projectId);
+      }
+
+      let branch = await channel.threads.fetch(project.branchId!);
+
+      if (!branch) {
+        branch = await message.startThread({
+          name: "Материалы тайтла",
+        });
+      }
+
+      let newProject = project;
+
+      if (project.branchId !== branch.id) {
+        newProject = await prisma.project.update({
+          where: {
+            id: projectId,
+          },
+          data: {
+            branchId: branch.id,
+          },
+          include: {
+            staff: true,
+            curator: true,
+            platforms: true,
+          },
+        });
+      }
+      const embed = this.processMessage(interaction, newProject);
+      message.edit({ embeds: [embed] });
+
+      interaction.editReply({
+        content: "Сообщени успешно обновлено",
+      });
+    } else {
+      const projectEmbed = this.processMessage(interaction, project);
+
+      const channelSelect =
+        new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+          new ChannelSelectMenuBuilder()
+            .setCustomId(ProjectPublishChannelSelectId)
+            .setChannelTypes(ChannelType.GuildText)
+            .setPlaceholder("Выберите канал публикации")
+        );
+
+      const repl = await interaction.editReply({
+        embeds: [projectEmbed],
+        components: [channelSelect],
+      });
+
+      const collector = repl.createMessageComponentCollector({
+        time: 600_000,
+      });
+      collector.on("collect", async (i) => {
+        const customId = i.customId;
+
+        if (customId === ProjectPublishChannelSelectId) {
+          const inter = i as ChannelSelectMenuInteraction;
+          const channelId = inter.values[0];
+
+          const channel = inter.guild?.channels.cache.get(
+            channelId!
+          ) as TextChannel;
+
+          try {
+            const message = await channel.send({
+              embeds: [projectEmbed],
+            });
+            const branch = await message.startThread({
+              name: "Материалы тайтла",
+            });
+
+            const newProject = await prisma.project.update({
+              where: {
+                id: projectId,
+              },
+              data: {
+                messageId: message.id,
+                branchId: branch.id,
+                channelId,
+              },
+              include: {
+                staff: true,
+                curator: true,
+                platforms: true,
+              },
+            });
+            const embed = this.processMessage(inter, newProject);
+            await message.edit({
+              embeds: [embed],
+            });
+          } catch {
+            return;
+          }
+        }
+      });
+    }
+  }
+
+  private async resetProjectMessage(projectId: number) {
+    await prisma.project.update({
+      where: {
+        id: projectId,
+      },
+      data: {
+        messageId: null,
+        channelId: null,
+        branchId: null,
+      },
     });
   }
 
   private processMessage(
     interaction: Interaction,
     project: Prisma.ProjectGetPayload<{
-      include: { platforms: true; staff: true };
+      include: { platforms: true; staff: true; curator: true };
     }>
   ) {
     const platforms = this.processPlatforms(project.platforms);
+    const staff = this.processStaff(project.staff, project.curator);
+
 
     const embed = new EmbedBuilder()
       .setDescription(quote(project.title))
@@ -252,7 +434,7 @@ export class ProjectPanel {
       .setFields([
         {
           name: "Рабочий состав",
-          value: "Нет",
+          value: staff.length ? staff.join("\n") : "Нет",
           inline: true,
         },
         {
@@ -266,6 +448,21 @@ export class ProjectPanel {
 
   private processPlatforms(platforms: Platform[]) {
     return platforms.map((p) => hyperlink(p.name, p.url));
+  }
+
+  private processStaff(
+    staff: Employee[],
+    curator?: Curator | undefined | null
+  ) {
+    return [
+      staff.map(
+        (e) =>
+          `${inlineCode(getRussianTranslation(e.profession as Profession))}:${userMention(e.userId)}`
+      ),
+      curator
+        ? `${inlineCode("Куратор")}:${userMention(curator.userId)}`
+        : null,
+    ].filter(Boolean);
   }
 
   // =============Управление кураторами===============
@@ -430,6 +627,328 @@ export class ProjectPanel {
   }
 
   // =============Управление работниками==========
+
+  private async manageEmployee(
+    interaction: ButtonInteraction,
+    projectId: number
+  ) {
+    await interaction.deferReply({ ephemeral: true });
+    const project = await prisma.project.findUnique({
+      where: {
+        id: projectId,
+      },
+      include: {
+        staff: true,
+      },
+    });
+
+    if (!project) {
+      return interaction.editReply({
+        content: "Указанный проект не существует",
+      });
+    }
+
+    const embed = new EmbedBuilder()
+      .setDefaults(interaction.user)
+      .setTitle("Управление работниками")
+      .setDescription("С помощью кнопок ниже вы сможете управлять работниками");
+
+    const canDelete = project.staff.length <= 0;
+    const canAssign = project.staff.length >= EmployeeLimit;
+
+    const employeeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(EmployeeAssignId)
+        .setLabel("Назначить")
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(canAssign),
+      new ButtonBuilder()
+        .setCustomId(EmployeeDeleteId)
+        .setLabel("Снять")
+        .setStyle(ButtonStyle.Danger)
+        .setDisabled(canDelete)
+    );
+
+    const repl = await interaction.editReply({
+      embeds: [embed],
+      components: [employeeRow],
+    });
+
+    const collector = repl.createMessageComponentCollector({ time: 600_000 });
+
+    collector.on("collect", async (i) => {
+      const customId = i.customId;
+      const project = await prisma.project.findUnique({
+        where: {
+          id: projectId,
+        },
+        include: {
+          staff: true,
+        },
+      });
+
+      if (!project) {
+        return i.reply({
+          content: "Указанный проект не существует",
+          ephemeral: true,
+        });
+      }
+
+      if (customId === EmployeeAssignId) {
+        return this.assignEmployee(i as ButtonInteraction, projectId);
+      }
+      if (customId === EmployeeDeleteId) {
+        return this.deleteEmployee(i as ButtonInteraction, projectId);
+      }
+    });
+  }
+
+  private async assignEmployee(
+    interaction: ButtonInteraction,
+    projectId: number
+  ) {
+    await interaction.deferReply({ ephemeral: true });
+    const project = await prisma.project.findUnique({
+      where: {
+        id: projectId,
+      },
+      include: {
+        staff: true,
+      },
+    });
+
+    if (!project) {
+      return interaction.editReply({
+        content: "Указанный проект не существует",
+      });
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle("Назначить работника")
+      .setDefaults(interaction.user)
+      .setDescription("С помощью селекта ниже выберите должность");
+
+    const professionSelect =
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(EmployeeAssignProfessionId)
+          .setPlaceholder("Выберите профессию")
+          .setOptions(
+            getRussianTranslations().map((i) =>
+              new StringSelectMenuOptionBuilder()
+                .setLabel(i.value!)
+                .setValue(i.key!)
+            )
+          )
+      );
+
+    const userSelect =
+      new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(
+        new UserSelectMenuBuilder()
+          .setCustomId(EmployeeAssignUsrId)
+          .setPlaceholder("Выберите пользователя")
+      );
+
+    const repl = await interaction.editReply({
+      embeds: [embed],
+      components: [professionSelect],
+    });
+
+    const collector = repl.createMessageComponentCollector({
+      time: 600_000,
+    });
+
+    let profession: Profession | null = null;
+    collector.on("collect", async (i) => {
+      const customId = i.customId;
+
+      const project = await prisma.project.findUnique({
+        where: {
+          id: projectId,
+        },
+      });
+
+      if (!project) {
+        return i.reply({
+          content: "Указанный проект не существует",
+          ephemeral: true,
+        });
+      }
+
+      await i.deferUpdate();
+
+      if (customId === EmployeeAssignProfessionId) {
+        const inter = i as StringSelectMenuInteraction;
+        const value = inter.values[0] as Profession;
+        profession = value;
+
+        return inter.editReply({
+          embeds: [
+            embed
+              .setTitle("Выберите пользователя")
+              .setDescription("Кого вы хотите назначить ?"),
+          ],
+          components: [userSelect],
+        });
+      }
+      if (customId === EmployeeAssignUsrId) {
+        const inter = i as UserSelectMenuInteraction;
+        const userId = inter.values[0];
+
+        const member = await inter.guild?.members.fetch(userId!);
+
+        if (member?.user.bot) {
+          return inter.editReply({
+            embeds: [
+              embed
+                .setTitle("Ошибка")
+                .setDescription("Выберите другого пользователя"),
+            ],
+          });
+        }
+
+        const employee = await prisma.employee.findFirst({
+          where: {
+            projectId: projectId,
+            userId: userId,
+            profession: profession!,
+          },
+        });
+
+        if (employee) {
+          await prisma.employee.update({
+            where: {
+              id: employee.id,
+            },
+            data: {
+              profession: profession!,
+            },
+          });
+        } else {
+          await prisma.employee.create({
+            data: {
+              userId: userId!,
+              profession: profession!,
+              projectId: projectId,
+            },
+          });
+        }
+
+        return inter.editReply({
+          embeds: [
+            embed
+              .setTitle("Работник назначен")
+              .setDescription("Вы успешно назначили работника"),
+          ],
+          components: [],
+        });
+      }
+      return;
+    });
+  }
+
+  private async deleteEmployee(
+    interaction: ButtonInteraction,
+    projectId: number
+  ) {
+    await interaction.deferReply({ ephemeral: true });
+    const project = await prisma.project.findUnique({
+      where: {
+        id: projectId,
+      },
+      include: {
+        staff: true,
+      },
+    });
+
+    if (!project) {
+      return interaction.editReply({
+        content: "Указанный проект не существует",
+      });
+    }
+
+    if (project.staff.length <= 0) {
+      return interaction.editReply({
+        content: "У проекта нет сотрудников",
+      });
+    }
+
+    const embed = new EmbedBuilder()
+      .setDefaults(interaction.user)
+      .setTitle("Снять работника")
+      .setDescription(
+        "В селект меню представлены должности, где есть сотрудники"
+      );
+
+    const professionSelect =
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(EmployeeDeleteProfessionId)
+          .setPlaceholder("Снять с должности")
+          .setOptions(
+            project.staff.map((e) =>
+              new StringSelectMenuOptionBuilder()
+                .setValue(e.profession)
+                .setLabel(getRussianTranslation(e.profession as Profession))
+            )
+          )
+      );
+
+    const repl = await interaction.editReply({
+      embeds: [embed],
+      components: [professionSelect],
+    });
+
+    const collector = repl.createMessageComponentCollector({
+      time: 600_000,
+    });
+
+    collector.on("collect", async (i) => {
+      await i.deferUpdate();
+      const customId = i.customId;
+      const project = await prisma.project.findUnique({
+        where: {
+          id: projectId,
+        },
+        include: {
+          staff: true,
+        },
+      });
+
+      if (!project) {
+        return i.editReply({
+          content: "Указанный проект не существует",
+        });
+      }
+
+      if (project.staff.length <= 0) {
+        return i.editReply({
+          content: "У проекта нет сотрудников",
+        });
+      }
+
+      if (customId === EmployeeDeleteProfessionId) {
+        const inter = i as StringSelectMenuInteraction;
+        const profession = inter.values[0] as Profession;
+
+        await prisma.employee.deleteMany({
+          where: {
+            projectId: projectId,
+            profession: profession,
+          },
+        });
+
+        return inter.editReply({
+          embeds: [
+            embed
+              .setTitle("Сотрудник снят")
+              .setDescription("Сотрудник успешно снят с должности"),
+          ],
+          components: [],
+        });
+      }
+    });
+  }
 
   // ==============Управление платформами==========
 
