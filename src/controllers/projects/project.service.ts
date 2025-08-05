@@ -1,5 +1,6 @@
 import {
   ActionRowBuilder,
+  // type AutocompleteInteraction,
   type CommandInteraction,
   type MessageContextMenuCommandInteraction,
   ModalBuilder,

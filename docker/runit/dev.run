@@ -1,2 +1,3 @@
 #!/bin/sh
-exec pnpm run dev
+cd /app
+exec yarn dev

@@ -9,12 +9,12 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "lint:check": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "build": "tsc -b && npx tsc-alias",
+    "build": "tsc -b && tsc-alias",
     "dev": "nodemon",
     "prod": "node dist/main.js",
-    "prisma:migrations:migrate": "pnpx prisma migrate dev",
-    "prisma:migrations:create": "pnpx prisma migrate dev --name",
-    "prisma:generate": "pnpx prisma generate"
+    "prisma:migrations:migrate": "npx prisma migrate dev",
+    "prisma:migrations:create": "npx prisma migrate dev --name",
+    "prisma:generate": "npx prisma generate"
   },
   "imports": {
     "#/*": "./dist/*"
@@ -22,7 +22,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.13.1",
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.30.1",
@@ -33,7 +32,9 @@
     "esbuild-plugin-version-injector": "^1.2.1",
     "eslint": "^9.30.1",
     "eslint-plugin-simple-import-sort": "^12.1.1",
+    "nodemon": "^3.1.10",
     "prisma": "^6.13.0",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5.9.2"
   },
   "dependencies": {
@@ -44,7 +45,6 @@
     "discordx": "^11.12.5",
     "dotenv": "^17.2.1",
     "globals": "^16.3.0",
-    "nodemon": "^3.1.10",
     "prettier": "^3.6.2",
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0"

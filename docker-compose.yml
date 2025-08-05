@@ -3,6 +3,12 @@ name: "dit"
 services:
   dit-bot:
     container_name: dit-bot
+    env_file:
+      - .env
+    depends_on:
+      - dit-postgres
+    networks:
+      - dit-network
     volumes:
       - ./:/app
     build:
@@ -21,9 +27,15 @@ services:
       POSTGRES_USER: postgres
     volumes:
       - postgres_data:/pgdata
+    networks:
+      - dit-network
     ports:
       - "5432:5432"
 
 volumes:
   postgres_data:
     driver: local
+
+networks:
+  dit-network:
+    driver: bridge

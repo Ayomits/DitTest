@@ -1,5 +1,5 @@
 {
   "watch": ["./src/**"],
   "ext": ".ts",
-  "exec": "pnpm run build && pnpm run prod"
+  "exec": "yarn build && yarn prod"
 }
