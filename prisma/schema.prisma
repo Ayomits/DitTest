@@ -26,9 +26,9 @@ model Project {
   guildId   String     @map("guild_id")
   title     String     @db.VarChar(255)
   poster    String
-  messageId String?    @map("message_id") @db.VarChar(255)
-  channelId String?    @map("channel_id") @db.VarChar(255)
-  branchId  String?    @map("branch_id") @db.VarChar(255)
+  messageId String?    @unique @map("message_id") @db.VarChar(255)
+  channelId String?    @unique @map("channel_id") @db.VarChar(255)
+  branchId  String?    @unique @map("branch_id") @db.VarChar(255)
   staff     Employee[]
   platforms Platform[]
   curator   Curator?
@@ -48,11 +48,11 @@ model Curator {
 }
 
 model Employee {
-  id         Int        @id @default(autoincrement())
+  id         Int     @id @default(autoincrement())
   userId     String
-  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   profession String
-  projectId  Int        @map("project_id")
+  projectId  Int     @map("project_id")
 
   @@map("employes")
 }

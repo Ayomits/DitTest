@@ -22,6 +22,7 @@ import {
   type Interaction,
   type InteractionEditReplyOptions,
   type Message,
+  type MessageContextMenuCommandInteraction,
   ModalBuilder,
   type ModalSubmitInteraction,
   quote,
@@ -89,7 +90,10 @@ export class ProjectPanel {
 
   // ==============Управление Панелью===================
   async panel(
-    interaction: CommandInteraction | ModalSubmitInteraction,
+    interaction:
+      | CommandInteraction
+      | ModalSubmitInteraction
+      | MessageContextMenuCommandInteraction,
     project: Project
   ) {
     const repl = await interaction.editReply(
@@ -1315,18 +1319,26 @@ export class ProjectPanel {
     return member.roles.cache.some((r) => existed.roleId == r.id);
   }
 
-  private async verifyUserPermissions(
+  async verifyUserPermissions(
     interaction: Interaction,
-    projectId: number
+    projectId: number | Prisma.ProjectGetPayload<{ include: { curator: true } }>
   ) {
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-      },
-      include: {
-        curator: true,
-      },
-    });
+    let project: Prisma.ProjectGetPayload<{
+      include: { curator: true };
+    }> | null = null;
+
+    if (typeof projectId === "number") {
+      project = await prisma.project.findFirst({
+        where: {
+          id: projectId,
+        },
+        include: {
+          curator: true,
+        },
+      });
+    } else {
+      project = projectId;
+    }
 
     const isSuperUser = await this.verifySuperUserStatus(interaction);
     const isProjectExists = !!project;

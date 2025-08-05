@@ -1,6 +1,7 @@
 import {
   ActionRowBuilder,
   type CommandInteraction,
+  type MessageContextMenuCommandInteraction,
   ModalBuilder,
   type ModalSubmitInteraction,
   TextInputBuilder,
@@ -153,4 +154,39 @@ export class ProjectService {
 
     return await this.projectPanel.panel(interaction, project);
   }
+
+  async updateProjectContext(
+    interaction: MessageContextMenuCommandInteraction
+  ) {
+    await interaction.deferReply({ ephemeral: true });
+    const project = await prisma.project.findUnique({
+      where: {
+        messageId: interaction.targetMessage.id,
+      },
+      include: {
+        curator: true,
+      },
+    });
+
+    if (!project) {
+      return interaction.editReply({
+        content: "Указанное сообщение не принадлежит никакому из проектов",
+      });
+    }
+
+    const activation = await this.projectPanel.verifyUserPermissions(
+      interaction,
+      project
+    );
+
+    if (!activation.canActivateCurator) {
+      return interaction.editReply({
+        content: "Вы не имеете права редактировать этот проект",
+      });
+    }
+
+    return await this.projectPanel.panel(interaction, project);
+  }
+
+  // async projectAutocomplete(interaction: AutocompleteInteraction) {}
 }

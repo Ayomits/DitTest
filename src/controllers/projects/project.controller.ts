@@ -1,9 +1,18 @@
 import {
   ApplicationCommandOptionType,
+  ApplicationCommandType,
   type CommandInteraction,
+  type MessageContextMenuCommandInteraction,
   type ModalSubmitInteraction,
 } from "discord.js";
-import { Discord, Guard, ModalComponent, Slash, SlashOption } from "discordx";
+import {
+  ContextMenu,
+  Discord,
+  Guard,
+  ModalComponent,
+  Slash,
+  SlashOption,
+} from "discordx";
 import { inject, singleton } from "tsyringe";
 
 import { IsSuperUser } from "#guards/is-curator.guard.js";
@@ -28,7 +37,7 @@ export class ProjectController {
   }
 
   @Slash({ name: "update-project", description: "Создать проект" })
-  async updateProject(
+  async updateProjectSlash(
     @SlashOption({
       name: "search",
       description: "Проект для обновления",
@@ -39,5 +48,15 @@ export class ProjectController {
     interaction: CommandInteraction
   ) {
     return this.projectService.updateProjectSlash(interaction, projectId);
+  }
+
+  @ContextMenu({
+    name: "Редактировать проект",
+    type: ApplicationCommandType.Message,
+  })
+  async updateProjectContext(
+    interaction: MessageContextMenuCommandInteraction
+  ) {
+    return this.projectService.updateProjectContext(interaction);
   }
 }
