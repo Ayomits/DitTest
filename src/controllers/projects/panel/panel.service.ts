@@ -89,6 +89,10 @@ export class ProjectPanel {
   ) {}
 
   // ==============Управление Панелью===================
+  /**
+   * Основной метод для вызова панели
+   * Важно, чтобы при вызове reply можно было редактировать!
+   */
   async panel(
     interaction:
       | CommandInteraction
@@ -275,6 +279,15 @@ export class ProjectPanel {
 
   // ============Управление публикацией======
 
+  /**
+   * Главный экран - кнопка публикации
+   *
+   * Метод ходит в базу данных, чтобы проверить наличие уже опубликованного сообщения
+   *
+   * Если сообщение уже есть, исполняется метод **handleUpdateProjectMessage**
+   *
+   * Если сообщения нет, исполняется метод **handlePublishProjectMessage**
+   */
   private async publishMessageButton(
     interaction: ButtonInteraction,
     projectId: number
@@ -298,6 +311,12 @@ export class ProjectPanel {
     }
   }
 
+  /**
+   * Главный экран
+   *
+   * Метод нужен, чтобы обновить существующее сообщение
+   * Если сообщение сломано - бот предложит нажать кнопку "отвязать"
+   */
   private async handleUpdateProjectMessage(
     interaction: ButtonInteraction,
     project: Prisma.ProjectGetPayload<{
@@ -369,6 +388,11 @@ export class ProjectPanel {
     }
   }
 
+  /**
+   * Главный экран
+   *
+   * Метод нужен, чтобы опубликовать сообщение впервые, а затем занести его в базу данных
+   */
   private async handlePublishProjectMessage(
     interaction: ButtonInteraction,
     project: Prisma.ProjectGetPayload<{
@@ -396,14 +420,15 @@ export class ProjectPanel {
       const inter = i as ChannelSelectMenuInteraction;
       const channelId = inter.values[0];
 
-      const channel = inter.guild?.channels.cache.get(
-        channelId!
-      ) as TextChannel;
-
       try {
+        const channel = (await inter.guild?.channels
+          .fetch(channelId!)
+          .catch(logger.error)) as TextChannel;
+
         const message = await channel.send({
           embeds: [projectEmbed],
         });
+
         const branch = await message.startThread({
           name: "Материалы тайтла",
         });
@@ -437,6 +462,9 @@ export class ProjectPanel {
     });
   }
 
+  /**
+   * Утилитарный метод для удаления channelId, branchId, messageId из БД
+   */
   private async resetProjectMessage(projectId: number) {
     return await prisma.project.update({
       where: {
@@ -453,6 +481,12 @@ export class ProjectPanel {
     });
   }
 
+  /**
+   * Главный Экран
+   *
+   * Кнопка для отвязки проекта
+   * Удаляет id ветки, сообщения, канала из БД
+   */
   private async handleUnlink(
     interaction: ButtonInteraction,
     projectId: number
@@ -464,6 +498,9 @@ export class ProjectPanel {
 
   // =============Сообщение для публикации===========
 
+  /**
+   * Утилитарный метод, который нужен для генерации эмбеда, который будет опубликован в канал после нажатия кнопки опубликовать/обновить
+   */
   private processMessageEmbed(
     interaction: Interaction,
     project: Prisma.ProjectGetPayload<{
@@ -497,10 +534,16 @@ export class ProjectPanel {
     return embed;
   }
 
+  /**
+   * Генерация массива с текстом для блока "Основные платформы"
+   */
   private processPlatformsText(platforms: Platform[]) {
     return platforms.map((p) => hyperlink(p.name, p.url));
   }
 
+  /**
+   * Генерация массива с текстом для блока "Рабочий состав"
+   */
   private processStaffText(
     staff: Employee[],
     curator?: Curator | undefined | null
@@ -520,6 +563,11 @@ export class ProjectPanel {
 
   // =============Управление кураторами===============
 
+  /**
+   * Главный экран
+   *
+   * Колбэк для селект меню "Назначить куратора"
+   */
   private async handleCuratorAssignment(
     interaction: UserSelectMenuInteraction,
     projectId: number
@@ -558,6 +606,11 @@ export class ProjectPanel {
     );
   }
 
+  /**
+   * Главный экран
+   *
+   * Колбэк для кнопки "Снять куратора"
+   */
   private async handleCuratorRemoval(
     interaction: ButtonInteraction,
     projectId: number
@@ -590,6 +643,11 @@ export class ProjectPanel {
 
   //==============Управление проектом============
 
+  /**
+   * Главный экран
+   *
+   * Колбэк для кнопки "Удалить проект"
+   */
   private async handleProjectDeletion(
     interaction: ButtonInteraction,
     projectId: number
@@ -652,6 +710,14 @@ export class ProjectPanel {
 
   // =============Управление работниками==========
 
+  /**
+   * Главный экран
+   *
+   * Перебрасывает в меню с управлением сотрудниками
+   *
+   * В меню даётся выбор "Назначить" или "Снять", далее идёт логика обработки
+   */
+
   private async handleEmployeeManagment(
     interaction: ButtonInteraction,
     projectId: number
@@ -705,6 +771,11 @@ export class ProjectPanel {
     });
   }
 
+  /**
+   * Экран "Управление работниками"
+   *
+   * Колбэк для кнопки "Назначить"
+   */
   private async handeEmployeeAsignment(
     interaction: ButtonInteraction,
     projectId: number
@@ -820,6 +891,11 @@ export class ProjectPanel {
     });
   }
 
+  /**
+   * Экран "Управление работниками"
+   *
+   * Колбэк для кнопки "Снять"
+   */
   private async handleEmployeeRemoval(
     interaction: ButtonInteraction,
     projectId: number
@@ -903,6 +979,13 @@ export class ProjectPanel {
 
   // ==============Управление платформами==========
 
+  /**
+   * Главный экран
+   *
+   * Колбэк для кнопки "Управление платформами"
+   *
+   * Просто перебрасывает в другую менюшку
+   */
   private async handlePlatformManagment(
     interaction: ButtonInteraction,
     projectId: number
@@ -938,6 +1021,11 @@ export class ProjectPanel {
     });
   }
 
+  /**
+   * Экран "Управление платформами"
+   *
+   * Колбэк для кнопки "Добавить платформу"
+   */
   private initPlatformCreation(
     interaction: ButtonInteraction,
     projectId: number
@@ -958,6 +1046,11 @@ export class ProjectPanel {
     return interaction.showModal(modal.addComponents(projectIdField));
   }
 
+  /**
+   * Экран "Управление платформами"
+   *
+   * Колбэк для модального окна с созданием платформы из метода **initPlatformCreation**
+   */
   async handlePlatformCreation(interaction: ModalSubmitInteraction) {
     const [title, url, projectId] = [
       interaction.fields.getTextInputValue(TitleFieldId),
@@ -1044,6 +1137,9 @@ export class ProjectPanel {
     );
   }
 
+  /**
+   * Генерирует модальное окно для 
+   */
   private async initPlatformUpdate(
     interaction: StringSelectMenuInteraction,
     projectId: number
