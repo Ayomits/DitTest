@@ -60,4 +60,14 @@ export class ProjectController {
   ) {
     return this.projectService.updateProjectContext(interaction);
   }
+
+  @ContextMenu({
+    name: "Отвязать проект",
+    type: ApplicationCommandType.Message,
+  })
+  async unlinkProjectContext(
+    interaction: MessageContextMenuCommandInteraction,
+  ) {
+    return this.projectService.unlinkProjecContext(interaction);
+  }
 }

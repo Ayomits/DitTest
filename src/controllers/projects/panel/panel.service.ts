@@ -454,9 +454,12 @@ export class ProjectPanel {
         await message.edit({
           embeds: [embed],
         });
+        inter.editReply({
+          content: `Вы успешно опубликовали проект в канал ${channelMention(channelId)}`,
+        });
       } catch (err) {
         logger.error(err);
-        interaction.editReply({
+        inter.editReply({
           content:
             "Не удалось отправить сообщение. Возможно, что у бота нет прав",
         });
@@ -467,7 +470,7 @@ export class ProjectPanel {
   /**
    * Утилитарный метод для удаления channelId, branchId, messageId из БД
    */
-  private async resetProjectMessage(projectId: number) {
+  async resetProjectMessage(projectId: number) {
     return await prisma.project.update({
       where: {
         id: projectId,

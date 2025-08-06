@@ -190,6 +190,47 @@ export class ProjectService {
     return await this.projectPanel.panel(interaction, project);
   }
 
+  async unlinkProjecContext(interaction: MessageContextMenuCommandInteraction) {
+    await interaction.deferReply({ ephemeral: true });
+    const project = await prisma.project.findUnique({
+      where: {
+        messageId: interaction.targetMessage.id,
+      },
+      include: {
+        curator: true,
+      },
+    });
+
+    if (!project) {
+      return interaction.editReply({
+        content: "Указанное сообщение не принадлежит никакому из проектов",
+      });
+    }
+
+    const activation = await this.projectPanel.verifyUserPermissions(
+      interaction,
+      project,
+    );
+
+    if (!activation.canActivateCurator) {
+      return interaction.editReply({
+        content: "Вы не имеете права редактировать этот проект",
+      });
+    }
+
+    try {
+      await this.projectPanel.resetProjectMessage(project.id);
+
+      return interaction.editReply({
+        content: "Вы успешно отвязали проект",
+      });
+    } catch {
+      return interaction.editReply({
+        content: "Что-то пошло не так",
+      });
+    }
+  }
+
   static async projectAutocomplete(interaction: AutocompleteInteraction) {
     try {
       const member = interaction.member as GuildMember;
