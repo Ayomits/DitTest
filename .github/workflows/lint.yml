@@ -2,7 +2,7 @@ name: Client CI
 
 on:
   push:
-    
+
 jobs:
   build_lint_format:
     runs-on: ubuntu-latest
@@ -16,7 +16,7 @@ jobs:
           node-version: 20
 
       - name: Install Dependencies
-        run: yarn pnpm install --frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       - name: Check prettier
         run: yarn format:check
