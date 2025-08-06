@@ -19,7 +19,7 @@ export class ConfigService {
   public getOrThrow<T = string>(key: string): T {
     const existed = this.get<T>(key);
     if (!existed) {
-      throw new Error(`Key ${key} does not exists`);
+      throw new Error(`Environment key ${key} does not exists`);
     }
     return existed;
   }
