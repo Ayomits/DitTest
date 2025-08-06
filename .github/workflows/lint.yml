@@ -1,0 +1,28 @@
+name: Client CI
+
+on:
+  push:
+    
+jobs:
+  build_lint_format:
+    runs-on: ubuntu-latest
+    name: Build, lint and format
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: yarn pnpm install --frozen-lockfile
+
+      - name: Check prettier
+        run: yarn format:check
+
+      - name: Check lint
+        run: yarn lint:check
+
+      - name: Run build
+        run: yarn build

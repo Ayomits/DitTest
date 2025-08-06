@@ -58,7 +58,7 @@ export const IsSuperUser: GuardFunction<
         embed
           .setTitle(IsSuperUserGuardMessages.forbidden.title)
           .setDescription(
-            IsSuperUserGuardMessages.forbidden.description(role.roleId)
+            IsSuperUserGuardMessages.forbidden.description(role.roleId),
           ),
       ],
       ephemeral: true,

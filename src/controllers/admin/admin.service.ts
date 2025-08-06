@@ -24,13 +24,13 @@ import {
 export class AdminService {
   constructor(
     @inject(SuperRolesRepository)
-    private curatorRolesRepository: SuperRolesRepository
+    private curatorRolesRepository: SuperRolesRepository,
   ) {}
 
   async assingRolesSlash(interaction: CommandInteraction) {
     await interaction.deferReply({ ephemeral: true });
     const existed = await this.curatorRolesRepository.findByGuildId(
-      interaction.guild!.id
+      interaction.guild!.id,
     );
     const username = UsersUtility.getUsername(interaction.user);
     const avatar = UsersUtility.getAvatar(interaction.user);
@@ -45,14 +45,14 @@ export class AdminService {
       new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
         new RoleSelectMenuBuilder()
           .setCustomId(AdminAssingCuratorRoleSelectId)
-          .setPlaceholder(AdminAssignRolesMessages.assingSelect.placeholder)
+          .setPlaceholder(AdminAssignRolesMessages.assingSelect.placeholder),
       );
     const removeCuratorRole =
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(AdminRemoveCuratorRoleButtonId)
           .setLabel(AdminAssignRolesMessages.removeButton.label)
-          .setStyle(ButtonStyle.Danger)
+          .setStyle(ButtonStyle.Danger),
       );
 
     return interaction.editReply({
@@ -73,7 +73,7 @@ export class AdminService {
     try {
       await this.curatorRolesRepository.updateOrCreate(
         roleId!,
-        interaction.guild!.id
+        interaction.guild!.id,
       );
     } catch (err) {
       logger.error(err);
@@ -81,10 +81,10 @@ export class AdminService {
         embeds: [
           embed
             .setTitle(
-              AdminAssignRolesMessages.assingSelect.messages.error.title
+              AdminAssignRolesMessages.assingSelect.messages.error.title,
             )
             .setDescription(
-              AdminAssignRolesMessages.assingSelect.messages.error.description
+              AdminAssignRolesMessages.assingSelect.messages.error.description,
             ),
         ],
       });
@@ -94,12 +94,12 @@ export class AdminService {
       embeds: [
         embed
           .setTitle(
-            AdminAssignRolesMessages.assingSelect.messages.success.title
+            AdminAssignRolesMessages.assingSelect.messages.success.title,
           )
           .setDescription(
             AdminAssignRolesMessages.assingSelect.messages.success.description(
-              roleId!
-            )
+              roleId!,
+            ),
           ),
       ],
     });
@@ -114,7 +114,7 @@ export class AdminService {
       .setFooter({ text: username, iconURL: avatar });
 
     const existed = await this.curatorRolesRepository.findByGuildId(
-      interaction.guild!.id
+      interaction.guild!.id,
     );
 
     if (!existed) {
@@ -122,11 +122,11 @@ export class AdminService {
         embeds: [
           embed
             .setTitle(
-              AdminAssignRolesMessages.removeButton.messages.notExisted.title
+              AdminAssignRolesMessages.removeButton.messages.notExisted.title,
             )
             .setDescription(
               AdminAssignRolesMessages.removeButton.messages.notExisted
-                .description
+                .description,
             ),
         ],
       });
@@ -134,7 +134,7 @@ export class AdminService {
 
     try {
       await this.curatorRolesRepository.deleteCuratorRole(
-        interaction.guild!.id
+        interaction.guild!.id,
       );
     } catch (err) {
       logger.error(err);
@@ -142,10 +142,10 @@ export class AdminService {
         embeds: [
           embed
             .setTitle(
-              AdminAssignRolesMessages.removeButton.messages.error.title
+              AdminAssignRolesMessages.removeButton.messages.error.title,
             )
             .setDescription(
-              AdminAssignRolesMessages.removeButton.messages.error.description
+              AdminAssignRolesMessages.removeButton.messages.error.description,
             ),
         ],
       });
@@ -155,10 +155,10 @@ export class AdminService {
       embeds: [
         embed
           .setTitle(
-            AdminAssignRolesMessages.removeButton.messages.success.title
+            AdminAssignRolesMessages.removeButton.messages.success.title,
           )
           .setDescription(
-            AdminAssignRolesMessages.removeButton.messages.success.description
+            AdminAssignRolesMessages.removeButton.messages.success.description,
           ),
       ],
     });

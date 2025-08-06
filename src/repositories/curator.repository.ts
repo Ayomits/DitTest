@@ -20,7 +20,7 @@ export class CuratorRepository {
     return await prisma.curator.findFirst({
       where: {
         userId,
-        projectId
+        projectId,
       },
     });
   }

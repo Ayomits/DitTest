@@ -1,1 +1,1 @@
-export type LiteralEnum<T> = T[keyof T]
+export type LiteralEnum<T> = T[keyof T];

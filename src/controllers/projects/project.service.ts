@@ -38,7 +38,7 @@ export class ProjectService {
         .setMaxLength(255)
         .setPlaceholder("Атака на титанов")
         .setRequired(true)
-        .setStyle(TextInputStyle.Short)
+        .setStyle(TextInputStyle.Short),
     );
 
     const poster = new ActionRowBuilder<TextInputBuilder>().addComponents(
@@ -48,7 +48,7 @@ export class ProjectService {
         .setMaxLength(255)
         .setPlaceholder("Вставьте сюда ссылку")
         .setRequired(true)
-        .setStyle(TextInputStyle.Short)
+        .setStyle(TextInputStyle.Short),
     );
 
     return interaction.showModal(modal.addComponents(title, poster));
@@ -70,7 +70,7 @@ export class ProjectService {
           embed
             .setTitle(CreateProjectMessages.embed.validation.url.title)
             .setFields(
-              CreateProjectMessages.embed.validation.url.fields(title, poster)
+              CreateProjectMessages.embed.validation.url.fields(title, poster),
             ),
         ],
       });
@@ -89,14 +89,14 @@ export class ProjectService {
             .setTitle(CreateProjectMessages.embed.validation.existed.title)
             .setDescription(
               CreateProjectMessages.embed.validation.existed.description(
-                interaction
-              )
+                interaction,
+              ),
             )
             .setFields(
               CreateProjectMessages.embed.validation.existed.fields(
                 title,
-                poster
-              )
+                poster,
+              ),
             ),
         ],
       });
@@ -158,7 +158,7 @@ export class ProjectService {
   }
 
   async updateProjectContext(
-    interaction: MessageContextMenuCommandInteraction
+    interaction: MessageContextMenuCommandInteraction,
   ) {
     await interaction.deferReply({ ephemeral: true });
     const project = await prisma.project.findUnique({
@@ -178,7 +178,7 @@ export class ProjectService {
 
     const activation = await this.projectPanel.verifyUserPermissions(
       interaction,
-      project
+      project,
     );
 
     if (!activation.canActivateCurator) {
@@ -215,7 +215,7 @@ export class ProjectService {
           },
         });
         return interaction.respond(
-          projects.map((p) => ({ value: p.id.toString(), name: p.title }))
+          projects.map((p) => ({ value: p.id.toString(), name: p.title })),
         );
       }
 
@@ -230,7 +230,7 @@ export class ProjectService {
       });
 
       return interaction.respond(
-        projects.map((p) => ({ value: p.id.toString(), name: p.title }))
+        projects.map((p) => ({ value: p.id.toString(), name: p.title })),
       );
     } catch {
       return interaction.respond([]);

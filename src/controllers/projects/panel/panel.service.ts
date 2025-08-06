@@ -85,7 +85,7 @@ export class ProjectPanel {
   constructor(
     @inject(SuperRolesRepository)
     private superRolesRepository: SuperRolesRepository,
-    @inject(CuratorRepository) private curatorRepository: CuratorRepository
+    @inject(CuratorRepository) private curatorRepository: CuratorRepository,
   ) {}
 
   // ==============Управление Панелью===================
@@ -98,11 +98,11 @@ export class ProjectPanel {
       | CommandInteraction
       | ModalSubmitInteraction
       | MessageContextMenuCommandInteraction,
-    project: Project
+    project: Project,
   ) {
     const repl = await interaction.editReply(
       // @ts-expect-error it should works correctly, but IDK what kind of type I should use, just ignore it
-      await this.createPanelMessage(interaction, project)
+      await this.createPanelMessage(interaction, project),
     );
     const collector = await this.createCollector(repl, project.id);
 
@@ -117,7 +117,7 @@ export class ProjectPanel {
         case customId === ProjectAssignCuratorId && activation.canActivateSuper:
           return this.handleCuratorAssignment(
             i as UserSelectMenuInteraction,
-            projectId
+            projectId,
           );
 
         // Кнопка для удаления куратора
@@ -129,14 +129,14 @@ export class ProjectPanel {
           activation.canActivateCurator:
           return this.handlePlatformManagment(
             i as ButtonInteraction,
-            projectId
+            projectId,
           );
 
         case customId === ProjectManageEmployeeId &&
           activation.canActivateCurator:
           return this.handleEmployeeManagment(
             i as ButtonInteraction,
-            projectId
+            projectId,
           );
 
         // Кнопка для превью
@@ -166,7 +166,7 @@ export class ProjectPanel {
     interaction: Interaction,
     project: Prisma.ProjectGetPayload<{
       include: { curator: true };
-    }>
+    }>,
   ): Promise<InteractionEditReplyOptions> {
     const embed = new EmbedBuilder()
       .setDefaults(interaction.user)
@@ -186,7 +186,7 @@ export class ProjectPanel {
         new UserSelectMenuBuilder()
           .setCustomId(ProjectAssignCuratorId)
           .setPlaceholder("Выберите куратора")
-          .setDisabled(!canAssignCurator)
+          .setDisabled(!canAssignCurator),
       );
 
     const manageRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -202,7 +202,7 @@ export class ProjectPanel {
         .setCustomId(ProjectRemoveCuratorId)
         .setLabel("Снять куратора")
         .setStyle(ButtonStyle.Danger)
-        .setDisabled(!canRemoveCurator)
+        .setDisabled(!canRemoveCurator),
     );
 
     const messageManageRow =
@@ -214,7 +214,9 @@ export class ProjectPanel {
         new ButtonBuilder()
           .setCustomId(ProjectPublishId)
           .setLabel(
-            project.messageId && project.channelId ? "Обновить" : "Опубликовать"
+            project.messageId && project.channelId
+              ? "Обновить"
+              : "Опубликовать",
           )
           .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
@@ -226,7 +228,7 @@ export class ProjectPanel {
           .setCustomId(ProjectDeleteId)
           .setLabel("Удалить проект")
           .setStyle(ButtonStyle.Danger)
-          .setDisabled(!isSuperUser)
+          .setDisabled(!isSuperUser),
       );
 
     return {
@@ -258,7 +260,7 @@ export class ProjectPanel {
 
   private async previewMessageButton(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferReply({ ephemeral: true });
     const project = await prisma.project.findUnique({
@@ -290,7 +292,7 @@ export class ProjectPanel {
    */
   private async publishMessageButton(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferReply({ ephemeral: true });
     const project = await prisma.project.findUnique({
@@ -321,7 +323,7 @@ export class ProjectPanel {
     interaction: ButtonInteraction,
     project: Prisma.ProjectGetPayload<{
       include: { platforms: true; staff: true; curator: true };
-    }>
+    }>,
   ) {
     try {
       const channel = (await interaction.guild?.channels
@@ -397,7 +399,7 @@ export class ProjectPanel {
     interaction: ButtonInteraction,
     project: Prisma.ProjectGetPayload<{
       include: { platforms: true; staff: true; curator: true };
-    }>
+    }>,
   ) {
     const projectEmbed = this.processMessageEmbed(interaction, project);
 
@@ -406,7 +408,7 @@ export class ProjectPanel {
         new ChannelSelectMenuBuilder()
           .setCustomId(ProjectPublishChannelSelectId)
           .setChannelTypes(ChannelType.GuildText)
-          .setPlaceholder("Выберите канал публикации")
+          .setPlaceholder("Выберите канал публикации"),
       );
 
     const repl = await interaction.editReply({
@@ -489,7 +491,7 @@ export class ProjectPanel {
    */
   private async handleUnlink(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferUpdate();
     const project = await this.resetProjectMessage(projectId);
@@ -505,7 +507,7 @@ export class ProjectPanel {
     interaction: Interaction,
     project: Prisma.ProjectGetPayload<{
       include: { platforms: true; staff: true; curator: true };
-    }>
+    }>,
   ) {
     const platforms = this.processPlatformsText(project.platforms);
     const staff = this.processStaffText(project.staff, project.curator);
@@ -546,13 +548,13 @@ export class ProjectPanel {
    */
   private processStaffText(
     staff: Employee[],
-    curator?: Curator | undefined | null
+    curator?: Curator | undefined | null,
   ) {
     return [
       staff
         .map(
           (e) =>
-            `${inlineCode(getRussianTranslation(e.profession as Profession))}:${userMention(e.userId)}`
+            `${inlineCode(getRussianTranslation(e.profession as Profession))}:${userMention(e.userId)}`,
         )
         .join("\n"),
       curator
@@ -570,7 +572,7 @@ export class ProjectPanel {
    */
   private async handleCuratorAssignment(
     interaction: UserSelectMenuInteraction,
-    projectId: number
+    projectId: number,
   ) {
     const userId = interaction.values[0];
     const member = await interaction.guild?.members.fetch(userId!);
@@ -586,7 +588,7 @@ export class ProjectPanel {
     const curator = await this.curatorRepository.findOrCreate(
       interaction.guildId!,
       userId!,
-      projectId
+      projectId,
     );
 
     const newProject = await prisma.project.update({
@@ -602,7 +604,7 @@ export class ProjectPanel {
     });
 
     return await interaction.editReply(
-      await this.createPanelMessage(interaction, newProject)
+      await this.createPanelMessage(interaction, newProject),
     );
   }
 
@@ -613,7 +615,7 @@ export class ProjectPanel {
    */
   private async handleCuratorRemoval(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferUpdate();
 
@@ -637,7 +639,7 @@ export class ProjectPanel {
     ]);
 
     await interaction.editReply(
-      await this.createPanelMessage(interaction, newProject)
+      await this.createPanelMessage(interaction, newProject),
     );
   }
 
@@ -650,7 +652,7 @@ export class ProjectPanel {
    */
   private async handleProjectDeletion(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferReply({ ephemeral: true });
 
@@ -667,7 +669,7 @@ export class ProjectPanel {
       new ButtonBuilder()
         .setCustomId(ProjectDeleteCancelId)
         .setEmoji("❌")
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Secondary),
     );
 
     const repl = await interaction.editReply({
@@ -720,7 +722,7 @@ export class ProjectPanel {
 
   private async handleEmployeeManagment(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferReply({ ephemeral: true });
     const project = await prisma.project.findUnique({
@@ -750,7 +752,7 @@ export class ProjectPanel {
         .setCustomId(EmployeeDeleteId)
         .setLabel("Снять")
         .setStyle(ButtonStyle.Danger)
-        .setDisabled(canDelete)
+        .setDisabled(canDelete),
     );
 
     const repl = await interaction.editReply({
@@ -778,7 +780,7 @@ export class ProjectPanel {
    */
   private async handeEmployeeAsignment(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferReply({ ephemeral: true });
 
@@ -796,16 +798,16 @@ export class ProjectPanel {
             getRussianTranslations().map((i) =>
               new StringSelectMenuOptionBuilder()
                 .setLabel(i.value!)
-                .setValue(i.key!)
-            )
-          )
+                .setValue(i.key!),
+            ),
+          ),
       );
 
     const userSelect =
       new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(
         new UserSelectMenuBuilder()
           .setCustomId(EmployeeAssignUsrId)
-          .setPlaceholder("Выберите пользователя")
+          .setPlaceholder("Выберите пользователя"),
       );
 
     const repl = await interaction.editReply({
@@ -898,7 +900,7 @@ export class ProjectPanel {
    */
   private async handleEmployeeRemoval(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferReply({ ephemeral: true });
     const project = await prisma.project.findUnique({
@@ -920,7 +922,7 @@ export class ProjectPanel {
       .setDefaults(interaction.user)
       .setTitle("Снять работника")
       .setDescription(
-        "В селект меню представлены должности, где есть сотрудники"
+        "В селект меню представлены должности, где есть сотрудники",
       );
 
     const professionSelect =
@@ -932,9 +934,9 @@ export class ProjectPanel {
             project!.staff.map((e) =>
               new StringSelectMenuOptionBuilder()
                 .setValue(e.profession)
-                .setLabel(getRussianTranslation(e.profession as Profession))
-            )
-          )
+                .setLabel(getRussianTranslation(e.profession as Profession)),
+            ),
+          ),
       );
 
     const repl = await interaction.editReply({
@@ -988,11 +990,11 @@ export class ProjectPanel {
    */
   private async handlePlatformManagment(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferReply({ ephemeral: true });
     const repl = await interaction.editReply(
-      await this.createPlatformManageMessage(interaction, projectId)
+      await this.createPlatformManageMessage(interaction, projectId),
     );
 
     const collector = await this.createCollector(repl, projectId);
@@ -1009,13 +1011,13 @@ export class ProjectPanel {
           activation.canActivateCurator:
           return this.handlePlatformRemoval(
             i as StringSelectMenuInteraction,
-            projectId
+            projectId,
           );
         case customId === PlatformManagerUpdateId &&
           activation.canActivateCurator:
           return this.initPlatformUpdate(
             i as StringSelectMenuInteraction,
-            projectId
+            projectId,
           );
       }
     });
@@ -1028,7 +1030,7 @@ export class ProjectPanel {
    */
   private initPlatformCreation(
     interaction: ButtonInteraction,
-    projectId: number
+    projectId: number,
   ) {
     const modal = this.createPlatformModal(PlatformManagerAddModalId);
 
@@ -1040,7 +1042,7 @@ export class ProjectPanel {
           .setPlaceholder("Верни как было!")
           .setValue(projectId.toString())
           .setRequired(true)
-          .setStyle(TextInputStyle.Short)
+          .setStyle(TextInputStyle.Short),
       );
 
     return interaction.showModal(modal.addComponents(projectIdField));
@@ -1114,7 +1116,7 @@ export class ProjectPanel {
         },
       });
       return await interaction.editReply(
-        await this.createPlatformManageMessage(interaction, numProjectId)
+        await this.createPlatformManageMessage(interaction, numProjectId),
       );
     }
 
@@ -1133,16 +1135,16 @@ export class ProjectPanel {
     });
     await interaction.deferUpdate();
     return await interaction.editReply(
-      await this.createPlatformManageMessage(interaction, numProjectId)
+      await this.createPlatformManageMessage(interaction, numProjectId),
     );
   }
 
   /**
-   * Генерирует модальное окно для 
+   * Генерирует модальное окно для
    */
   private async initPlatformUpdate(
     interaction: StringSelectMenuInteraction,
-    projectId: number
+    projectId: number,
   ) {
     const platformId = Number(interaction.values[0]);
 
@@ -1155,13 +1157,13 @@ export class ProjectPanel {
     if (!platform) {
       await interaction.deferUpdate();
       return await interaction.editReply(
-        await this.createPlatformManageMessage(interaction, projectId)
+        await this.createPlatformManageMessage(interaction, projectId),
       );
     }
 
     const modal = this.createPlatformModal(
       PlatformManagerUpdateModalId,
-      platform
+      platform,
     );
 
     const platformIdField =
@@ -1172,7 +1174,7 @@ export class ProjectPanel {
           .setPlaceholder("Верни как было!")
           .setValue(platformId.toString())
           .setRequired(true)
-          .setStyle(TextInputStyle.Short)
+          .setStyle(TextInputStyle.Short),
       );
 
     const projectIdField =
@@ -1183,11 +1185,11 @@ export class ProjectPanel {
           .setPlaceholder("Верни как было!")
           .setValue(projectId.toString())
           .setRequired(true)
-          .setStyle(TextInputStyle.Short)
+          .setStyle(TextInputStyle.Short),
       );
 
     return interaction.showModal(
-      modal.addComponents(platformIdField, projectIdField)
+      modal.addComponents(platformIdField, projectIdField),
     );
   }
 
@@ -1266,13 +1268,13 @@ export class ProjectPanel {
 
     await interaction.deferUpdate();
     return await interaction.editReply(
-      await this.createPlatformManageMessage(interaction, numProjectId)
+      await this.createPlatformManageMessage(interaction, numProjectId),
     );
   }
 
   private async handlePlatformRemoval(
     interaction: StringSelectMenuInteraction,
-    projectId: number
+    projectId: number,
   ) {
     await interaction.deferUpdate();
     const platformId = Number(interaction.values[0]);
@@ -1292,13 +1294,13 @@ export class ProjectPanel {
     }
 
     await interaction.editReply(
-      await this.createPlatformManageMessage(interaction, projectId)
+      await this.createPlatformManageMessage(interaction, projectId),
     );
   }
 
   private async createPlatformManageMessage(
     interaction: Interaction,
-    projectId: number
+    projectId: number,
   ): Promise<InteractionEditReplyOptions> {
     const project = await prisma.project.findUnique({
       where: {
@@ -1315,12 +1317,12 @@ export class ProjectPanel {
         .map((platform) =>
           new StringSelectMenuOptionBuilder()
             .setLabel(platform.name)
-            .setValue(platform.id.toString())
+            .setValue(platform.id.toString()),
         ) ?? [];
     const embed = new EmbedBuilder()
       .setTitle("Управление платформами проекта")
       .setDescription(
-        "С помощью кнопок ниже вы сможете управлять привязанными к проекту платформами"
+        "С помощью кнопок ниже вы сможете управлять привязанными к проекту платформами",
       )
       .setFields({
         name: "Количество платформ",
@@ -1333,7 +1335,7 @@ export class ProjectPanel {
         new StringSelectMenuBuilder()
           .setCustomId(PlatformManagerUpdateId)
           .setPlaceholder("Платформа для обновления")
-          .setOptions(platforms)
+          .setOptions(platforms),
       );
 
     const deleteProjectSelect =
@@ -1341,14 +1343,14 @@ export class ProjectPanel {
         new StringSelectMenuBuilder()
           .setCustomId(PlatformManagerRemoveId)
           .setPlaceholder("Платформа для удаления")
-          .setOptions(platforms)
+          .setOptions(platforms),
       );
 
     const addPlatform = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(PlatformManagerAddButtonId)
         .setLabel("Добавить платформу")
-        .setStyle(ButtonStyle.Success)
+        .setStyle(ButtonStyle.Success),
     );
 
     const components =
@@ -1403,7 +1405,7 @@ export class ProjectPanel {
 
   private async verifySuperUserStatus(interaction: Interaction) {
     const existed = await this.superRolesRepository.findByGuildId(
-      interaction.guild!.id
+      interaction.guild!.id,
     );
 
     if (!interaction.guild || !interaction.member || !existed) {
@@ -1417,7 +1419,9 @@ export class ProjectPanel {
 
   async verifyUserPermissions(
     interaction: Interaction,
-    projectId: number | Prisma.ProjectGetPayload<{ include: { curator: true } }>
+    projectId:
+      | number
+      | Prisma.ProjectGetPayload<{ include: { curator: true } }>,
   ) {
     let project: Prisma.ProjectGetPayload<{
       include: { curator: true };
@@ -1441,7 +1445,7 @@ export class ProjectPanel {
     const isCurator =
       interaction.member && interaction.guild
         ? (interaction.member as GuildMember).roles.cache.some(
-            (r) => r.id == project?.curator?.userId
+            (r) => r.id == project?.curator?.userId,
           )
         : false;
 

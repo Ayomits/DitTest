@@ -46,7 +46,7 @@ export class ProjectController {
       required: true,
     })
     projectId: string,
-    interaction: CommandInteraction
+    interaction: CommandInteraction,
   ) {
     return this.projectService.updateProjectSlash(interaction, projectId);
   }
@@ -56,7 +56,7 @@ export class ProjectController {
     type: ApplicationCommandType.Message,
   })
   async updateProjectContext(
-    interaction: MessageContextMenuCommandInteraction
+    interaction: MessageContextMenuCommandInteraction,
   ) {
     return this.projectService.updateProjectContext(interaction);
   }
